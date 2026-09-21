@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokeball Clicker Extreme</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="game-container" id="game-container">
+    <!-- PAINEL ESQUERDO: ÁREA DA POKEBALL PRINCIPAL -->
+    <div class="click-zone">
+      <h1 class="header-title">Pokeball Clicker</h1>
+
+      <!-- ESTATÍSTICAS -->
+      <div class="stats-board">
+        <div class="stat-box">
+          <label>Moedas</label>
+          <div class="val">
+            <span class="mario-coin"></span>
+            <span id="lbl-coins">0</span>
+          </div>
+        </div>
+        <div class="stat-box">
+          <label>Por Clique</label>
+          <div class="val" id="lbl-cpc" style="color: #38bdf8;">+1</div>
+        </div>
+        <div class="stat-box">
+          <label>Por Segundo</label>
+          <div class="val" id="lbl-cps" style="color: #4ade80;">0/s</div>
+        </div>
+      </div>
+
+      <!-- BADGE E COMBO -->
+      <div class="ball-card">
+        <div class="badge" id="lbl-badge">Comum</div>
+        <div class="ball-name" id="lbl-ball-name">Pokeball Clássica</div>
+        <div class="combo-badge" id="lbl-combo">Combo: 1.0x</div>
+      </div>
+
+      <!-- POKEBALL CLICÁVEL -->
+      <div class="pokeball-wrapper" id="pokeball-btn">
+        <div class="pokeball" id="pokeball-main">
+          <div class="pokeball-top" id="pokeball-top-bg"></div>
+          <div class="pokeball-line"></div>
+          <div class="pokeball-button"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAINEL DIREITO: LOJA E SISTEMA DE ABAS -->
+    <div class="shop-panel">
+      <!-- NAVEGAÇÃO ENTRE ABAS -->
+      <div class="shop-tabs">
+        <button class="tab-btn active" id="tab-upgrades-btn" onclick="switchTab('upgrades')">⚡ Upgrades</button>
+        <button class="tab-btn" id="tab-multipliers-btn" onclick="switchTab('multipliers')">✨ Pokeballs</button>
+        <button class="tab-btn" id="tab-skins-btn" onclick="switchTab('skins')">🎨 Skins</button>
+      </div>
+
+      <!-- CONTEÚDO DAS ABAS -->
+      <div class="tab-content" id="tab-upgrades">
+        <div class="upgrades-list" id="upgrades-container"></div>
+      </div>
+
+      <div class="tab-content hidden" id="tab-multipliers">
+        <div class="upgrades-list" id="multipliers-container"></div>
+      </div>
+
+      <div class="tab-content hidden" id="tab-skins">
+        <div class="upgrades-list" id="skins-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
