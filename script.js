@@ -1,443 +1,346 @@
-/* RESET & DESATIVEI HIGHLIGHT AZUL */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-tap-highlight-color: transparent;
-}
+// ESTADO DO JOGO
+let gameState = {
+  coins: 0,
+  baseClickPower: 1,
+  multiplier: 1,
+  coinsPerSecond: 0,
+  tierIndex: 0,
+  combo: 1,
+  selectedSkinColor: null
+};
 
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #0b132b 0%, #1c2541 50%, #3a506b 100%);
-  color: #fff;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-  overflow-x: hidden;
-  overflow-y: auto;
-}
+let lastClickTime = 0;
+let comboTimer = null;
 
-/* CONTAINER PRINCIPAL */
-.game-container {
-  background: rgba(15, 23, 42, 0.88);
-  backdrop-filter: blur(15px);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
-  width: 100%;
-  max-width: 980px;
-  display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 20px;
-  padding: 25px;
-  position: relative;
-}
+const pokeballImgUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png";
 
-@media (max-width: 768px) {
-  body {
-    align-items: flex-start;
-    padding: 10px;
+// GERADOR DE EFEITOS SONOROS (WEB AUDIO API)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(type) {
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
   }
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
 
-  .game-container {
-    grid-template-columns: 1fr;
-    padding: 15px;
-    gap: 15px;
-  }
-
-  .shop-panel {
-    max-height: 400px;
+  if (type === 'click') {
+    osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.05);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.05);
+  } else if (type === 'crit') {
+    osc.frequency.setValueAtTime(500, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.15);
+  } else if (type === 'golden') {
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1600, audioCtx.currentTime + 0.25);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.25);
   }
 }
 
-/* PAINEL ESQUERDO */
-.click-zone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  position: relative;
+// EVOLUÇÕES DA POKEBALL PRINCIPAL
+const pokeballs = [
+  { name: "Pokeball Clássica", badge: "Comum", color: "#ef4444", req: 0 },
+  { name: "Great Ball", badge: "Incomum", color: "#3b82f6", req: 200 },
+  { name: "Ultra Ball", badge: "Rara", color: "#eab308", req: 2000 },
+  { name: "Master Ball", badge: "Lendária", color: "#a855f7", req: 15000 },
+  { name: "Safari Ball", badge: "Épica", color: "#22c55e", req: 80000 },
+  { name: "Ultra Beast Ball", badge: "Mítica", color: "#06b6d4", req: 300000 },
+  { name: "Luxury Ball", badge: "Luxo", color: "#1e293b", req: 1200000 },
+  { name: "Master Gold Ball", badge: "Suprema", color: "#f59e0b", req: 5000000 }
+];
+
+// SKINS DESBLOQUEÁVEIS
+const skins = [
+  { name: "Vermelha Padrão", color: "#ef4444" },
+  { name: "Azul Neon", color: "#06b6d4" },
+  { name: "Rosa Amor", color: "#ec4899" },
+  { name: "Sombria", color: "#334155" },
+  { name: "Verde Esmeralda", color: "#10b981" },
+  { name: "Dourada Reluzente", color: "#f59e0b" }
+];
+
+// UPGRADES BASE AMPLIADOS
+const upgrades = [
+  { id: "click1", name: "Clique Duplo", isDoubleBall: true, desc: "+1 por Clique Base", cost: 15, cpc: 1, cps: 0, count: 0, mult: 1.4 },
+  { id: "auto1", name: "Pikachu Ajudante", icon: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png", desc: "+1 por Segundo", cost: 50, cpc: 0, cps: 1, count: 0, mult: 1.35 },
+  { id: "click2", name: "Luva de Captura", icon: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/power-bracer.png", desc: "+5 por Clique Base", cost: 150, cpc: 5, cps: 0, count: 0, mult: 1.5 },
+  { id: "auto2", name: "Centro Pokémon", icon: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/max-potion.png", desc: "+8 por Segundo", cost: 400, cpc: 0, cps: 8, count: 0, mult: 1.4 },
+  { id: "click3", name: "Arremesso Perfeito", icon: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/scope-lens.png", desc: "+25 por Clique Base", cost: 1200, cpc: 25, cps: 0, count: 0, mult: 1.6 },
+  { id: "auto3", name: "Charizard de Elite", icon: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png", desc: "+40 por Segundo", cost: 3000, cpc: 0, cps: 40, count: 0, mult: 1.5 },
+  { id: "click4", name: "Mewtwo Telepático", icon: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/150.png", desc: "+100 por Clique Base", cost: 10000, cpc: 100, cps: 0, count: 0, mult: 1.65 },
+  { id: "auto4", name: "Fábrica Silph Co.", icon: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/up-grade.png", desc: "+250 por Segundo", cost: 35000, cpc: 0, cps: 250, count: 0, mult: 1.55 },
+  { id: "auto5", name: "Rayquaza Lendário", icon: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/384.png", desc: "+1,200 por Segundo", cost: 150000, cpc: 0, cps: 1200, count: 0, mult: 1.6 }
+];
+
+// MULTIPLICADORES DE POKEBALL AMPLIADOS
+const multiplierUpgrades = [
+  { id: "m_great", name: "Super Ball Boost", icon: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/great-ball.png", desc: "Multiplica cliques por 2x", cost: 500, factor: 2, bought: false },
+  { id: "m_ultra", name: "Ultra Ball Boost", icon: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/ultra-ball.png", desc: "Multiplica cliques por 2x (Total 4x)", cost: 3500, factor: 2, bought: false },
+  { id: "m_master", name: "Master Ball Boost", icon: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/master-ball.png", desc: "Multiplica cliques por 2x (Total 8x)", cost: 25000, factor: 2, bought: false },
+  { id: "m_safari", name: "Safari Ball Boost", icon: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/safari-ball.png", desc: "Multiplica cliques por 2x (Total 16x)", cost: 150000, factor: 2, bought: false },
+  { id: "m_gold", name: "Master Gold Boost", icon: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/luxury-ball.png", desc: "Multiplica cliques por 3x (Total 48x)", cost: 1000000, factor: 3, bought: false }
+];
+
+// ELEMENTOS DOM
+const gameContainer = document.getElementById("game-container");
+const pokeballBtn = document.getElementById("pokeball-btn");
+const pokeballTopBg = document.getElementById("pokeball-top-bg");
+const lblCoins = document.getElementById("lbl-coins");
+const lblCpc = document.getElementById("lbl-cpc");
+const lblCps = document.getElementById("lbl-cps");
+const lblBadge = document.getElementById("lbl-badge");
+const lblBallName = document.getElementById("lbl-ball-name");
+const lblCombo = document.getElementById("lbl-combo");
+const upgradesContainer = document.getElementById("upgrades-container");
+const multipliersContainer = document.getElementById("multipliers-container");
+const skinsContainer = document.getElementById("skins-container");
+
+// ABAS DO PAINEL DA LOJA
+function switchTab(tabName) {
+  document.getElementById("tab-upgrades").classList.add("hidden");
+  document.getElementById("tab-multipliers").classList.add("hidden");
+  document.getElementById("tab-skins").classList.add("hidden");
+  
+  document.getElementById("tab-upgrades-btn").classList.remove("active");
+  document.getElementById("tab-multipliers-btn").classList.remove("active");
+  document.getElementById("tab-skins-btn").classList.remove("active");
+
+  document.getElementById(`tab-${tabName}`).classList.remove("hidden");
+  document.getElementById(`tab-${tabName}-btn`).classList.add("active");
 }
 
-.header-title {
-  color: #ffcb05;
-  text-shadow: 0 4px 10px rgba(255, 203, 5, 0.3);
-  font-size: 1.8rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 15px;
+function getTotalClickPower() {
+  return Math.floor(gameState.baseClickPower * gameState.multiplier * gameState.combo);
 }
 
-/* STATS BOARD */
-.stats-board {
-  display: flex;
-  gap: 12px;
-  width: 100%;
-  margin-bottom: 20px;
-}
-
-.stat-box {
-  flex: 1;
-  background: rgba(30, 41, 59, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 10px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.stat-box label {
-  display: block;
-  font-size: 0.75rem;
-  color: #94a3b8;
-  font-weight: 700;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
-
-.stat-box .val {
-  font-size: 1.2rem;
-  font-weight: 800;
-  color: #ffcb05;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* MOEDA TIPO MARIO 64 */
-.mario-coin {
-  width: 20px;
-  height: 26px;
-  background: linear-gradient(90deg, #ffe600 0%, #ffaa00 50%, #ffe600 100%);
-  border-radius: 50% / 10%;
-  border: 2px solid #b37400;
-  box-shadow: inset 0 0 4px #ffffff, 0 0 8px rgba(255, 217, 0, 0.6);
-  display: inline-block;
-  animation: coinSpin 1.2s infinite linear;
-  transform-style: preserve-3d;
-}
-
-@keyframes coinSpin {
-  0% { transform: rotateY(0deg); }
-  50% { transform: rotateY(180deg); }
-  100% { transform: rotateY(360deg); }
-}
-
-/* BADGES & COMBO */
-.ball-card {
-  background: rgba(15, 23, 42, 0.6);
-  border-radius: 12px;
-  padding: 8px 16px;
-  text-align: center;
-  margin-bottom: 10px;
-}
-
-.badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  background: #ef4444;
-  margin-bottom: 4px;
-}
-
-.ball-name {
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-.combo-badge {
-  font-size: 0.8rem;
-  color: #facc15;
-  font-weight: 800;
-  margin-top: 4px;
-}
-
-/* POKEBALL PRINCIPAL EM CSS */
-.pokeball-wrapper {
-  position: relative;
-  width: 220px;
-  height: 220px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 15px 0;
-  cursor: pointer;
-}
-
-.pokeball {
-  width: 200px;
-  height: 200px;
-  border-radius: 50%;
-  border: 8px solid #0f172a;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), inset 0 -8px 15px rgba(0, 0, 0, 0.3);
-  transition: transform 0.05s ease, filter 0.2s;
-  background: white;
-}
-
-.pokeball-wrapper:hover .pokeball {
-  filter: brightness(1.1);
-}
-
-.pokeball-wrapper:active .pokeball {
-  transform: scale(0.92);
-}
-
-.pokeball-top {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 50%;
-  background: #ef4444;
-  transition: background 0.3s;
-}
-
-.pokeball-line {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 100%;
-  height: 14px;
-  background: #0f172a;
-  transform: translateY(-50%);
-  z-index: 2;
-}
-
-.pokeball-button {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 48px;
-  height: 48px;
-  background: #fff;
-  border: 8px solid #0f172a;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 3;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
-}
-
-/* POKEBALL SURPRESA (SHINY/GOLDEN) */
-.golden-ball {
-  position: absolute;
-  width: 60px;
-  height: 60px;
-  background: radial-gradient(circle, #ffe600, #ffaa00);
-  border: 4px solid #fff;
-  border-radius: 50%;
-  box-shadow: 0 0 20px #ffe600, 0 0 30px #ffe600;
-  cursor: pointer;
-  z-index: 100;
-  animation: pulseGolden 0.6s infinite alternate;
-}
-
-@keyframes pulseGolden {
-  0% { transform: scale(1); }
-  100% { transform: scale(1.15); }
-}
-
-/* TEXTO FLUTUANTE */
-.float-text {
-  position: absolute;
-  font-weight: 900;
-  font-size: 1.6rem;
-  color: #ffcb05;
-  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 12px rgba(255, 203, 5, 0.8);
-  pointer-events: none;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  animation: floatRandom 0.8s ease-out forwards;
-}
-
-.float-text.crit {
-  color: #ef4444;
-  font-size: 2.2rem;
-  text-shadow: 0 0 15px #ef4444;
-}
-
-@keyframes floatRandom {
-  0% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(0.5);
+// EVENTO DE CLIQUE DA POKEBALL PRINCIPAL
+pokeballBtn.addEventListener("pointerdown", (e) => {
+  const now = Date.now();
+  if (now - lastClickTime < 300) {
+    gameState.combo = Math.min(3.0, parseFloat((gameState.combo + 0.1).toFixed(1)));
   }
-  50% {
-    opacity: 1;
-    transform: translate(calc(-50% + var(--dx) * 0.5), calc(-50% + var(--dy) * 0.5)) scale(1.3);
+  lastClickTime = now;
+
+  clearTimeout(comboTimer);
+  comboTimer = setTimeout(() => {
+    gameState.combo = 1.0;
+    updateUI();
+  }, 1000);
+
+  // CHANCE DE CAPTURA CRÍTICA (10% DE CHANCE PARA 5X DE GANHO)
+  const isCrit = Math.random() < 0.10;
+  let power = getTotalClickPower();
+  if (isCrit) {
+    power *= 5;
+    playSound('crit');
+  } else {
+    playSound('click');
   }
-  100% {
-    opacity: 0;
-    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.8);
+
+  gameState.coins += power;
+
+  createFloatingText(e, power, isCrit);
+  checkEvolution();
+  updateUI();
+});
+
+function createFloatingText(event, power, isCrit = false) {
+  const rect = pokeballBtn.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+
+  const floatEl = document.createElement("div");
+  floatEl.className = `float-text ${isCrit ? 'crit' : ''}`;
+  floatEl.innerHTML = `<span class="mario-coin" style="width:14px; height:18px;"></span>+${power}${isCrit ? ' CRIT!' : ''}`;
+  floatEl.style.left = `${x}px`;
+  floatEl.style.top = `${y}px`;
+
+  const angle = Math.random() * Math.PI * 2;
+  const distance = 70 + Math.random() * 50;
+
+  floatEl.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+  floatEl.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+
+  pokeballBtn.appendChild(floatEl);
+  setTimeout(() => floatEl.remove(), 800);
+}
+
+// MECÂNICA DA POKEBALL DOURADA SURPRESA (SHINY)
+function spawnGoldenBall() {
+  const golden = document.createElement("div");
+  golden.className = "golden-ball";
+  golden.style.top = `${Math.random() * 70 + 15}%`;
+  golden.style.left = `${Math.random() * 70 + 15}%`;
+
+  golden.addEventListener("click", () => {
+    const reward = Math.max(50, Math.floor(getTotalClickPower() * 20));
+    gameState.coins += reward;
+    playSound('golden');
+    golden.remove();
+    updateUI();
+  });
+
+  gameContainer.appendChild(golden);
+  setTimeout(() => golden.remove(), 5000);
+}
+
+setInterval(() => {
+  if (Math.random() < 0.3) spawnGoldenBall();
+}, 45000);
+
+function checkEvolution() {
+  if (!gameState.selectedSkinColor && gameState.tierIndex + 1 < pokeballs.length) {
+    const nextTier = pokeballs[gameState.tierIndex + 1];
+    if (gameState.coins >= nextTier.req) {
+      gameState.tierIndex++;
+      const current = pokeballs[gameState.tierIndex];
+      lblBadge.innerText = current.badge;
+      lblBadge.style.background = current.color;
+      lblBallName.innerText = current.name;
+      pokeballTopBg.style.background = current.color;
+    }
   }
 }
 
-/* PAINEL DIREITO */
-.shop-panel {
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 15px;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  max-height: 520px;
+function applySkin(color) {
+  gameState.selectedSkinColor = color;
+  pokeballTopBg.style.background = color;
 }
 
-.shop-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 15px;
-  background: rgba(15, 23, 42, 0.6);
-  padding: 4px;
-  border-radius: 10px;
+function buyUpgrade(index) {
+  const upg = upgrades[index];
+  if (gameState.coins >= upg.cost) {
+    gameState.coins -= upg.cost;
+    upg.count++;
+    gameState.baseClickPower += upg.cpc;
+    gameState.coinsPerSecond += upg.cps;
+    upg.cost = Math.floor(upg.cost * upg.mult);
+
+    renderUpgrades();
+    checkEvolution();
+    updateUI();
+  }
 }
 
-.tab-btn {
-  flex: 1;
-  padding: 8px 4px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: #94a3b8;
-  font-weight: 800;
-  font-size: 0.8rem;
-  cursor: pointer;
-  transition: all 0.2s;
+function buyMultiplier(index) {
+  const upg = multiplierUpgrades[index];
+  if (!upg.bought && gameState.coins >= upg.cost) {
+    gameState.coins -= upg.cost;
+    upg.bought = true;
+    gameState.multiplier *= upg.factor;
+
+    renderMultipliers();
+    checkEvolution();
+    updateUI();
+  }
 }
 
-.tab-btn.active {
-  background: #38bdf8;
-  color: #0f172a;
-  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+function renderUpgrades() {
+  upgradesContainer.innerHTML = "";
+  upgrades.forEach((upg, idx) => {
+    const card = document.createElement("div");
+    card.className = "upgrade-card";
+
+    let iconHTML = `<img src="${upg.icon}" class="upgrade-icon-img">`;
+    if (upg.isDoubleBall) {
+      iconHTML = `
+        <div class="double-pokeball-icon">
+          <img src="${pokeballImgUrl}" class="bg-ball">
+          <img src="${pokeballImgUrl}" class="fg-ball">
+        </div>`;
+    }
+
+    card.innerHTML = `
+      <div class="upgrade-info">
+        ${iconHTML}
+        <div class="upgrade-details">
+          <span class="upgrade-name">${upg.name} (${upg.count})</span>
+          <span class="upgrade-desc">${upg.desc}</span>
+        </div>
+      </div>
+      <button class="buy-btn" id="btn-upg-${idx}" onclick="buyUpgrade(${idx})">
+        <span class="mario-coin" style="width:12px; height:16px;"></span>
+        ${upg.cost.toLocaleString()}
+      </button>`;
+    upgradesContainer.appendChild(card);
+  });
 }
 
-.tab-content {
-  flex: 1;
-  overflow-y: auto;
-  padding-right: 5px;
-  -webkit-overflow-scrolling: touch;
+function renderMultipliers() {
+  multipliersContainer.innerHTML = "";
+  multiplierUpgrades.forEach((upg, idx) => {
+    const card = document.createElement("div");
+    card.className = "upgrade-card";
+    card.innerHTML = `
+      <div class="upgrade-info">
+        <img src="${upg.icon}" class="upgrade-icon-img">
+        <div class="upgrade-details">
+          <span class="upgrade-name">${upg.name}</span>
+          <span class="upgrade-desc">${upg.desc}</span>
+        </div>
+      </div>
+      <button class="buy-btn" id="btn-mult-${idx}" onclick="buyMultiplier(${idx})">
+        ${upg.bought ? 'COMPRADO' : `<span class="mario-coin" style="width:12px; height:16px;"></span> ${upg.cost.toLocaleString()}`}
+      </button>`;
+    multipliersContainer.appendChild(card);
+  });
 }
 
-.tab-content.hidden {
-  display: none;
+function renderSkins() {
+  skinsContainer.innerHTML = "";
+  skins.forEach((sk) => {
+    const card = document.createElement("div");
+    card.className = "upgrade-card";
+    card.innerHTML = `
+      <div class="upgrade-info">
+        <div style="width:30px; height:30px; border-radius:50%; background:${sk.color}; border:2px solid #fff;"></div>
+        <div class="upgrade-details">
+          <span class="upgrade-name">${sk.name}</span>
+        </div>
+      </div>
+      <button class="buy-btn" onclick="applySkin('${sk.color}')">Equipar</button>`;
+    skinsContainer.appendChild(card);
+  });
 }
 
-.tab-content::-webkit-scrollbar {
-  width: 6px;
+function updateUI() {
+  lblCoins.innerText = Math.floor(gameState.coins).toLocaleString();
+  lblCpc.innerText = `+${getTotalClickPower()}`;
+  lblCps.innerText = `${gameState.coinsPerSecond}/s`;
+  lblCombo.innerText = `Combo: ${gameState.combo.toFixed(1)}x`;
+
+  upgrades.forEach((upg, idx) => {
+    const btn = document.getElementById(`btn-upg-${idx}`);
+    if (btn) btn.disabled = gameState.coins < upg.cost;
+  });
+
+  multiplierUpgrades.forEach((upg, idx) => {
+    const btn = document.getElementById(`btn-mult-${idx}`);
+    if (btn) btn.disabled = upg.bought || gameState.coins < upg.cost;
+  });
 }
 
-.tab-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-}
+setInterval(() => {
+  if (gameState.coinsPerSecond > 0) {
+    gameState.coins += gameState.coinsPerSecond / 10;
+    checkEvolution();
+    updateUI();
+  }
+}, 100);
 
-.upgrades-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.upgrade-card {
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 10px 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.upgrade-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.double-pokeball-icon {
-  position: relative;
-  width: 44px;
-  height: 44px;
-}
-
-.double-pokeball-icon img {
-  width: 32px;
-  height: 32px;
-  position: absolute;
-  object-fit: contain;
-}
-
-.double-pokeball-icon img.bg-ball {
-  top: 0;
-  left: 0;
-  opacity: 0.75;
-  transform: rotate(-15deg);
-}
-
-.double-pokeball-icon img.fg-ball {
-  bottom: 0;
-  right: 0;
-  transform: rotate(15deg);
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-}
-
-.upgrade-icon-img {
-  width: 42px;
-  height: 42px;
-  object-fit: contain;
-}
-
-.upgrade-details {
-  display: flex;
-  flex-direction: column;
-}
-
-.upgrade-name {
-  font-weight: 700;
-  font-size: 0.88rem;
-}
-
-.upgrade-desc {
-  font-size: 0.75rem;
-  color: #c084fc;
-}
-
-.buy-btn {
-  background: #ffcb05;
-  color: #0f172a;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-weight: 800;
-  font-size: 0.82rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
-}
-
-.buy-btn:hover:not(:disabled) {
-  background: #facc15;
-  transform: translateY(-2px);
-}
-
-.buy-btn:disabled {
-  background: #475569;
-  color: #94a3b8;
-  cursor: not-allowed;
-  opacity: 0.5;
-}
+renderUpgrades();
+renderMultipliers();
+renderSkins();
+updateUI();
