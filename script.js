@@ -1,0 +1,443 @@
+/* RESET & DESATIVEI HIGHLIGHT AZUL */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #0b132b 0%, #1c2541 50%, #3a506b 100%);
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* CONTAINER PRINCIPAL */
+.game-container {
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(15px);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  width: 100%;
+  max-width: 980px;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  padding: 25px;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  body {
+    align-items: flex-start;
+    padding: 10px;
+  }
+
+  .game-container {
+    grid-template-columns: 1fr;
+    padding: 15px;
+    gap: 15px;
+  }
+
+  .shop-panel {
+    max-height: 400px;
+  }
+}
+
+/* PAINEL ESQUERDO */
+.click-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.header-title {
+  color: #ffcb05;
+  text-shadow: 0 4px 10px rgba(255, 203, 5, 0.3);
+  font-size: 1.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 15px;
+}
+
+/* STATS BOARD */
+.stats-board {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.stat-box {
+  flex: 1;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-box label {
+  display: block;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.stat-box .val {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #ffcb05;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* MOEDA TIPO MARIO 64 */
+.mario-coin {
+  width: 20px;
+  height: 26px;
+  background: linear-gradient(90deg, #ffe600 0%, #ffaa00 50%, #ffe600 100%);
+  border-radius: 50% / 10%;
+  border: 2px solid #b37400;
+  box-shadow: inset 0 0 4px #ffffff, 0 0 8px rgba(255, 217, 0, 0.6);
+  display: inline-block;
+  animation: coinSpin 1.2s infinite linear;
+  transform-style: preserve-3d;
+}
+
+@keyframes coinSpin {
+  0% { transform: rotateY(0deg); }
+  50% { transform: rotateY(180deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+/* BADGES & COMBO */
+.ball-card {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 12px;
+  padding: 8px 16px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  background: #ef4444;
+  margin-bottom: 4px;
+}
+
+.ball-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.combo-badge {
+  font-size: 0.8rem;
+  color: #facc15;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+/* POKEBALL PRINCIPAL EM CSS */
+.pokeball-wrapper {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 15px 0;
+  cursor: pointer;
+}
+
+.pokeball {
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  border: 8px solid #0f172a;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), inset 0 -8px 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.05s ease, filter 0.2s;
+  background: white;
+}
+
+.pokeball-wrapper:hover .pokeball {
+  filter: brightness(1.1);
+}
+
+.pokeball-wrapper:active .pokeball {
+  transform: scale(0.92);
+}
+
+.pokeball-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  background: #ef4444;
+  transition: background 0.3s;
+}
+
+.pokeball-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 14px;
+  background: #0f172a;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.pokeball-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 48px;
+  height: 48px;
+  background: #fff;
+  border: 8px solid #0f172a;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
+
+/* POKEBALL SURPRESA (SHINY/GOLDEN) */
+.golden-ball {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, #ffe600, #ffaa00);
+  border: 4px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 20px #ffe600, 0 0 30px #ffe600;
+  cursor: pointer;
+  z-index: 100;
+  animation: pulseGolden 0.6s infinite alternate;
+}
+
+@keyframes pulseGolden {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.15); }
+}
+
+/* TEXTO FLUTUANTE */
+.float-text {
+  position: absolute;
+  font-weight: 900;
+  font-size: 1.6rem;
+  color: #ffcb05;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.9), 0 0 12px rgba(255, 203, 5, 0.8);
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: floatRandom 0.8s ease-out forwards;
+}
+
+.float-text.crit {
+  color: #ef4444;
+  font-size: 2.2rem;
+  text-shadow: 0 0 15px #ef4444;
+}
+
+@keyframes floatRandom {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--dx) * 0.5), calc(-50% + var(--dy) * 0.5)) scale(1.3);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.8);
+  }
+}
+
+/* PAINEL DIREITO */
+.shop-panel {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 520px;
+}
+
+.shop-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 15px;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 8px 4px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  font-weight: 800;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  background: #38bdf8;
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+}
+
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 5px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tab-content.hidden {
+  display: none;
+}
+
+.tab-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tab-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.upgrades-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.upgrade-card {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.upgrade-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.double-pokeball-icon {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+
+.double-pokeball-icon img {
+  width: 32px;
+  height: 32px;
+  position: absolute;
+  object-fit: contain;
+}
+
+.double-pokeball-icon img.bg-ball {
+  top: 0;
+  left: 0;
+  opacity: 0.75;
+  transform: rotate(-15deg);
+}
+
+.double-pokeball-icon img.fg-ball {
+  bottom: 0;
+  right: 0;
+  transform: rotate(15deg);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.upgrade-icon-img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.upgrade-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.upgrade-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.upgrade-desc {
+  font-size: 0.75rem;
+  color: #c084fc;
+}
+
+.buy-btn {
+  background: #ffcb05;
+  color: #0f172a;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-weight: 800;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.buy-btn:hover:not(:disabled) {
+  background: #facc15;
+  transform: translateY(-2px);
+}
+
+.buy-btn:disabled {
+  background: #475569;
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
